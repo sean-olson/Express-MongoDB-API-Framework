@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= title %></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous">
+    <style>  
+      .section-head{
+        margin-top: 50px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1><%= heading %></h1>
+      <p>REQUEST: <span class="fw-bold"><%= request %></span></p>
+      <p>STATUS: <span class="fw-bold"><%= status_code %></span></p>
+      <p>MESSAGE: <span class="fw-bold"><%= message %></span></p>
+      <h5>STACK TRACE:</h5>
+      <pre><%= stack %></pre>
+    </div>
+  </body>
+</html>

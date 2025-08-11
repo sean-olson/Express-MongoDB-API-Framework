@@ -1,0 +1,151 @@
+// #!/usr/bin/env node
+
+/**
+ * @fileoverview Service bootstrap for the Express application.
+ * Creates and starts an HTTP/HTTPS server, initializes the MongoDB connection,
+ * wires standard "error" and "listening" handlers, and supports graceful shutdown.
+ *
+ * Environment variables (loaded via dotenv) are accessed through the Env singleton:
+ * - SERVICE_NAME, NODE_ENV, HTTP_PORT, HTTPS_PORT, USE_SSL, SERVICE_URL, VERSION
+ * - DB_* variables for MongoDB connectivity
+ */
+
+const fs = require("fs");
+const path = require("path");
+const http = require("http");
+const https = require("https");
+require("dotenv").config({ path: path.resolve(__dirname, "..", ".env") });
+
+const app = require("../app");
+const env = require("../lib/environment/environment.js");
+const debug = require("debug")(`${env.serviceName}:server`);
+const db = require("../lib/data/db.js");
+const logger = require("../lib/utilities/logger");
+
+/**
+ * Effective server port derived from env:
+ * uses HTTPS port if SSL is enabled, otherwise HTTP port.
+ * @type {number|string|false}
+ */
+const server_port = env.useSSL ? normalizePort(env.httpsPort) : normalizePort(env.httpPort);
+
+/**
+ * Holds the created HTTP/HTTPS server instance after startup.
+ * @type {import('http').Server|import('https').Server|undefined}
+ */
+let server;
+
+/**
+ * Top-level async startup routine.
+ * - Connects to MongoDB.
+ * - Creates the HTTP or HTTPS server.
+ * - Begins listening on the configured port.
+ *
+ * On unrecoverable startup error, logs and exits with code 1.
+ *
+ * @returns {Promise<void>} Resolves once listeners are attached (server listen is async event-driven).
+ */
+(async function start() {
+  try {
+    await db.connect();
+
+    server = createServer(app);
+    server.listen(server_port);
+    server.on("error", (e) => onError(server_port, e));
+    server.on("listening", () => {
+      logger.info(`The ${env.useSSL ? "HTTPS" : "HTTP"} server is listening on port ${server_port}`);
+      logger.info(`Tier: ${env.environment}`);
+      logger.info(`Base URL: ${env.serviceUrl}`);
+    });
+  } catch (err) {
+    logger.error("Failed during startup:", {error: err});
+    process.exit(1);
+  }
+})();
+
+/**
+ * Normalize a port into a number, string (named pipe), or false.
+ *
+ * @param {number|string} val - Port value (may be a number or named pipe).
+ * @returns {number|string|false} Parsed port number, original string for pipe, or false for invalid.
+ */
+function normalizePort(val) {
+  const port = parseInt(val, 10);
+  if (isNaN(port)) return val; // named pipe
+  if (port >= 0) return port;
+  return false;
+}
+
+/**
+ * Generic server "error" event handler for listen-related failures.
+ *
+ * @param {number|string|false} port - Port or pipe on which the server attempted to listen.
+ * @param {NodeJS.ErrnoException} error - Error object emitted by the server.
+ * @throws {Error} Rethrows non-listen syscall errors and unknown error codes.
+ * @returns {void}
+ */
+function onError(port, error) {
+  if (error.syscall !== "listen") throw error;
+
+  const bind = typeof port === "string" ? `Pipe ${port}` : `Port ${port}`;
+  switch (error.code) {
+    case "EACCES":
+      logger.error(`${bind} requires elevated privileges`, {error});
+      process.exit(1);
+    case "EADDRINUSE":
+      logger.error(`${bind} is already in use`, {error});
+      process.exit(1);
+    default:
+      throw error;
+  }
+}
+
+/**
+ * Factory to create an HTTP or HTTPS server using the provided Express app.
+ * If SSL is enabled, requires "key.pem" and "cert.pem" in the project root.
+ *
+ * @param {import('express').Express} app - The Express application instance.
+ * @returns {import('http').Server|import('https').Server} The created server instance.
+ */
+function createServer(app) {
+  if (env.useSSL) {
+    const keyPath = path.join(__dirname, "..", "key.pem");
+    const certPath = path.join(__dirname, "..", "cert.pem");
+
+    if (!fs.existsSync(keyPath) || !fs.existsSync(certPath)) {
+      logger.error("SSL is enabled, but key.pem or cert.pem is missing.", {error: new Error("ssl key or cert is missing")});
+      process.exit(1);
+    }
+
+    return https.createServer({
+      key: fs.readFileSync(keyPath),
+      cert: fs.readFileSync(certPath),
+    }, app);
+  } else {
+    return http.createServer(app);
+  }
+}
+
+/**
+ * Handle SIGINT for graceful shutdown:
+ * - Closes MongoDB client
+ * - Stops the HTTP/HTTPS server from accepting new connections
+ * - Exits with code 0 on success, 1 on failure
+ */
+process.on("SIGINT", async () => {
+  logger.info("\n Received SIGINT. Shutting down...");
+  try {
+    await db.close();
+    if (server) {
+      server.close(() => {
+        logger.info("Server closed.");
+        process.exit(0);
+      });
+    } else {
+      process.exit(0);
+    }
+  } catch (err) {
+    logger.error("Error during shutdown:", {error: err});
+    process.exit(1);
+  }
+});

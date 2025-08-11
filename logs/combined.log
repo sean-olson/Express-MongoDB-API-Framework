@@ -1,0 +1,11 @@
+{"level":"info","message":"The HTTP server is listening on port 3000"}
+{"level":"info","message":"Tier: production"}
+{"level":"info","message":"Base URL: localhost"}
+{"level":"info","message":"The HTTP server is listening on port 3000"}
+{"level":"info","message":"Tier: production"}
+{"level":"info","message":"Base URL: localhost"}
+{"level":"info","message":"\n Received SIGINT. Shutting down..."}
+{"level":"info","message":"The HTTP server is listening on port 3000"}
+{"level":"info","message":"Tier: production"}
+{"level":"info","message":"Base URL: localhost"}
+{"level":"info","message":"\n Received SIGINT. Shutting down..."}
