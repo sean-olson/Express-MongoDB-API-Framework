@@ -47,6 +47,9 @@ This project is designed to serve as a **reusable starting point** for creating 
 │   │   ├── error_utils.js
 │   │   ├── logger.js
 │   │   └── mongo_utils.js
+├── /logs
+│   ├── combined.log
+│   ├── error.js
 ├── v1_routes
 │   ├── index.js
 │   ├── diagnostic_routes
@@ -75,7 +78,7 @@ This project is designed to serve as a **reusable starting point** for creating 
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-username/express-mongo-api-scaffold.git
+git clone https://github.com/sean-olson/Express-MongoDB-API-Framework.git
 cd express-mongo-api-scaffold
 ```
 
@@ -109,15 +112,17 @@ cp .env_template .env
 | `USER_NAME`    | Optional MongoDB username (only for secured DBs)                  | `""`                            |
 | `PASSWORD`     | Optional MongoDB password (only for secured DBs)                  | `""`                            |
 
+### 4. Create Log Files
+The framework is configured to work with Winston file transports out of the box.  Just create a logs directory at the root of the project, `mkdir logs`, and then create the two transport log files, `touch ./logs/combined.log ./logs/error.log`.
 
 **Note:** Never commit your .env file to version control — it may contain sensitive credentials.
 
-### 4. Start the Development Server
+### 5. Start the Development Server
 ```bash
 npm run dev
 ```
 
-### 5. Start in Production
+### 6. Start in Production
 ```bash
 npm start
 ```
