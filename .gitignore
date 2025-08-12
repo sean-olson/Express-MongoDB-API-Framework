@@ -9,3 +9,4 @@ _private
 .env
 cert.pem
 key.pem
+*.log
